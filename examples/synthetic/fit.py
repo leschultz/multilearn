@@ -1,9 +1,6 @@
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from multilearn import datasets, models, utils
 from torch import optim, nn
-
-import pandas as pd
 
 
 def main():
@@ -11,7 +8,7 @@ def main():
     save_dir = 'outputs'
     lr = 1e-4
     batch_size = 32
-    n_epochs = 1000
+    n_epochs = 100
     tasks = ['data1', 'data2', 'data3']
 
     # Data
@@ -21,8 +18,6 @@ def main():
     for k, v in data.items():
         data[k]['scaler'] = StandardScaler()
         data[k]['loss'] = nn.L1Loss()
-
-    n_datasets = len(data)
 
     model = models.MultiNet(tasks=tasks, input_arch={500: 1})
     optimizer = optim.Adam
@@ -37,7 +32,7 @@ def main():
                       save_dir=save_dir,
                       )
 
-    print(out)
+    print(out['df_loss'])
 
 
 if __name__ == '__main__':

@@ -144,7 +144,7 @@ def generate(
              save='.',
              ):
 
-    for group, values in df_parity.groupby(['data', 'set']):
+    for group, values in df_parity.groupby(['data', 'split']):
 
         y = values['y']
         sigma_y = y.std()
@@ -160,13 +160,13 @@ def generate(
         elif data_set == 'test':
             color = 'r'
 
-        save_dir = os.path.join(*[save, f'data_{data_indx}', 'parity'])
+        save_dir = os.path.join(*[save, f'{data_indx}', 'parity'])
         os.makedirs(save_dir, exist_ok=True)
         newsave = os.path.join(save_dir, '{}.png'.format(data_set))
 
         parity(y, y_pred, sigma_y, newsave, color)
 
-    for group, values in df_loss.groupby(['data', 'set']):
+    for group, values in df_loss.groupby(['data', 'split']):
 
         x = values['epoch'].values
         y = values['loss'].values
@@ -180,7 +180,7 @@ def generate(
         elif data_set == 'test':
             color = 'r'
 
-        save_dir = os.path.join(*[save, f'data_{data_indx}', 'mae_vs_epoch'])
+        save_dir = os.path.join(*[save, f'{data_indx}', 'loss_vs_epoch'])
         os.makedirs(save_dir, exist_ok=True)
         newsave = os.path.join(save_dir, '{}.png'.format(data_set))
 
@@ -194,9 +194,9 @@ def learning_curve(x, y, save, group, color):
 
     val = min(y)
 
-    label = '{}: lowest MAE value: {:.2f}'.format(group.capitalize(), val)
+    label = '{}: lowest loss value: {:.2f}'.format(group.capitalize(), val)
     label += '\n'
-    label += '{}: last MAE value: {:.2f}'.format(group.capitalize(), y[-1])
+    label += '{}: last loss value: {:.2f}'.format(group.capitalize(), y[-1])
 
     ax.plot(
             x,
@@ -207,7 +207,7 @@ def learning_curve(x, y, save, group, color):
             )
 
     ax.set_xlabel('Epoch')
-    ax.set_ylabel('Mean Average Error')
+    ax.set_ylabel('Loss')
 
     data = {}
     data['mae'] = y.tolist()

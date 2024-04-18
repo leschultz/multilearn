@@ -1,6 +1,7 @@
 from lightning.pytorch.utilities.combined_loader import CombinedLoader
 from torch.utils.data import DataLoader, TensorDataset
 from multilearn import plots
+from joblib import dump
 
 import pandas as pd
 import numpy as np
@@ -18,16 +19,10 @@ else:
 
 
 def save(
-         scaler,
          model,
          df_parity,
          df_loss,
-         X_train,
-         y_train,
-         X_val=None,
-         y_val=None,
-         X_test=None,
-         y_test=None,
+         data,
          save_dir='./outputs',
          ):
 
@@ -40,52 +35,31 @@ def save(
                os.path.join(save_dir, 'model.pth')
                )
 
-    if scaler is not None:
-        dill.dump(scaler, open(os.path.join(save_dir, 'scaler.pkl'), 'wb'))
-
     df_parity.to_csv(os.path.join(save_dir, 'predictions.csv'), index=False)
-    df_loss.to_csv(os.path.join(save_dir, 'mae_vs_epochs.csv'), index=False)
+    df_loss.to_csv(os.path.join(save_dir, 'loss_vs_epochs.csv'), index=False)
 
-    for i in range(len(X_train)):
+    for key, value in data.items():
 
-        X = X_train[i].cpu().detach()
-        y = y_train[i]
-        np.savetxt(os.path.join(
-                                save_dir,
-                                f'X_train_{i}.csv',
-                                ), X, delimiter=',')
-        np.savetxt(os.path.join(
-                                save_dir,
-                                f'y_train_{i}.csv',
-                                ), y, delimiter=',')
+        new_dir = os.path.join(save_dir, key)
+        for k, v in value.items():
+            if k == 'scaler':
+                dump(v, os.path.join(new_dir, 'scaler.joblib'))
 
-        if X_val is not None:
-            np.savetxt(
-                       os.path.join(save_dir, f'X_validation_{i}.csv'),
-                       X_val[i].cpu().detach(),
-                       delimiter=',',
-                       )
+            elif k == 'loss':
+                dill.dump(
+                          v,
+                          open(os.path.join(new_dir, 'loss.pkl'), 'wb'),
+                          )
 
-        if y_val is not None:
-            np.savetxt(
-                       os.path.join(save_dir, f'y_validation_{i}.csv'),
-                       y_val[i],
-                       delimiter=',',
-                       )
+            else:
 
-        if X_test is not None:
-            np.savetxt(
-                       os.path.join(save_dir, f'X_test_{i}.csv'),
-                       X_test[i].cpu().detach(),
-                       delimiter=',',
-                       )
+                if 'X_' in k:
+                    v = v.cpu().detach()
 
-        if y_test is not None:
-            np.savetxt(
-                       os.path.join(save_dir, f'y_test_{i}.csv'),
-                       y_test[i],
-                       delimiter=',',
-                       )
+                np.savetxt(os.path.join(
+                                        new_dir,
+                                        f'{k}.csv',
+                                        ), v, delimiter=',')
 
 
 def to_tensor(x):
@@ -109,17 +83,24 @@ def loader(X, y, batch_size=32, shuffle=True):
     return data
 
 
-def pred(model, X, y, indxs):
+def pred(model, data):
 
     df = []
     with torch.no_grad():
-        for indx in indxs:
+        for key, value in data.items():
 
-            d = pd.DataFrame()
-            d['y'] = y[indx].cpu().detach().view(-1)
-            d['p'] = model(X[indx], indx).cpu().detach().view(-1)
-            d['data'] = indx
-            df.append(d)
+            for k, v in value.items():
+
+                if 'X_' in k:
+                    split = k.split('_')[1]
+                    X = value[k]
+                    y = value['y_'+split]
+                    d = pd.DataFrame()
+                    d['y'] = y.cpu().detach().view(-1)
+                    d['p'] = model(X, key).cpu().detach().view(-1)
+                    d['data'] = key
+                    d['split'] = split
+                    df.append(d)
 
     df = pd.concat(df)
 
@@ -152,18 +133,10 @@ def train(
 
     # Apply transforms when needed
     data_train = {}
-    valcond = False  # Val set
-    testcond = False  # Test set
     for key, value in data.items():
         for k, v in value.items():
             if 'X_' in k:
                 value[k] = value['scaler'].transform(value[k])
-
-            if 'val' in k:
-                valcond = True
-
-            if 'test' in k:
-                testcond = True
 
             if (k != 'scaler') and (k != 'loss'):
                 value[k] = to_tensor(value[k])
@@ -174,7 +147,6 @@ def train(
                                  batch_size,
                                  )
 
-    n_datasets = len(data)
     data_train = CombinedLoader(data_train, 'max_size')
 
     df_loss = []
@@ -211,11 +183,11 @@ def train(
                 d = (epoch, loss, indx, 'train')
                 df_loss.append(d)
 
-                if valcond:
+                if 'y_val' in data[indx].keys():
 
-                    y = y_val[indx]
-                    p = model(X_val[indx], indx)
-                    loss = losses[indx](p, y).item()
+                    y = data[indx]['y_val']
+                    p = model(data[indx]['X_val'], indx)
+                    loss = data[indx]['loss'](p, y).item()
 
                     d = (epoch, loss, indx, 'validation')
                     df_loss.append(d)
@@ -225,46 +197,25 @@ def train(
             print(p+f'Train loss {loss:.2f}')
 
     # Loss curve
-    columns = ['epoch', 'loss', 'data', 'set']
+    columns = ['epoch', 'loss', 'data', 'split']
     df_loss = pd.DataFrame(df_loss, columns=columns)
 
     # Train parity
-    df_parity = pred(model, X_train, y_train, data.keys())
-    df_parity['set'] = 'train'
-
-    # Validation parity
-    if valcond:
-
-        df = pred(model, X_val, y_val, data.keys())
-        df['set'] = 'validation'
-        df_parity = pd.concat([df_parity, df])
-
-    # Test parity
-    if testcond:
-
-        df = pred(model, X_test, y_test, data.keys())
-        df['set'] = 'test'
-        df_parity = pd.concat([df_parity, df])
+    df_parity = pred(model, data)
 
     save(
-         scalers,
          model,
          df_parity,
          df_loss,
-         X_train,
-         y_train,
-         X_val,
-         y_val,
-         X_test,
-         y_test,
+         data,
          save_dir,
          )
 
     out = {
            'model': model,
-           'scalers': scalers,
-           'df_loss': df_loss,
            'df_parity': df_parity,
+           'df_loss': df_loss,
+           'data': data,
            }
 
     return out

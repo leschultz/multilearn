@@ -20,6 +20,7 @@ install_requires = [
                     'pandas',
                     'matplotlib',
                     'dill',
+                    'pytest',
                     ]
 
 long_description = open('README.md').read()
