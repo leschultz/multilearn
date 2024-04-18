@@ -15,6 +15,11 @@ classifiers = ['Programming Language :: Python :: 3',
 packages = setuptools.find_packages(where='src')
 install_requires = [
                     'torch',
+                    'scikit-learn',
+                    'lightning',
+                    'pandas',
+                    'matplotlib',
+                    'dill',
                     ]
 
 long_description = open('README.md').read()

@@ -1,10 +1,10 @@
 from lightning.pytorch.utilities.combined_loader import CombinedLoader
 from torch.utils.data import DataLoader, TensorDataset
+from multilearn import plots
 
 import pandas as pd
 import numpy as np
 
-import plots
 import torch
 import copy
 import dill
@@ -109,23 +109,6 @@ def loader(X, y, batch_size=32, shuffle=True):
     return data
 
 
-def transform(Xin, yin, scalers):
-
-    Xout = []
-    for i in range(len(Xin)):
-
-        if scalers[i] is not None:
-            X = scalers[i].transform(Xin[i])
-        else:
-            X = Xin[i]
-
-        Xout.append(to_tensor(X))
-
-    yout = list(map(to_tensor, yin))
-
-    return Xout, yout
-
-
 def pred(model, X, y, indxs):
 
     df = []
@@ -146,65 +129,63 @@ def pred(model, X, y, indxs):
 def train(
           model,
           optimizer,
-          losses,
-          X_train,
-          y_train,
-          X_val=None,
-          y_val=None,
-          X_test=None,
-          y_test=None,
+          data,
           n_epochs=1000,
           batch_size=32,
           lr=1e-4,
-          scalers=None,
           save_dir='outputs',
           print_n=100,
           ):
 
-    # Conditions in case validation and/or test sets are supplied
-    valcond = all([X_val is not None, y_val is not None])  # Val set
-    testcond = all([X_test is not None, y_test is not None])  # Test set
-
     # Copy objects
     model = copy.deepcopy(model).to(device)
-    scalers = copy.deepcopy(scalers)
-    losses = copy.deepcopy(losses)
+    data = copy.deepcopy(data)
 
     optimizer = optimizer(model.parameters(), lr=lr)
 
-    n_datasets = len(X_train)
-    assert n_datasets == len(y_train)
+    # Fit scalers
+    for key, value in data.items():
+        for k, v in value.items():
+            if k == 'scaler':
+                value['scaler'].fit(value['X_train'])
+                break
 
-    # Fit scaler
-    if scalers is None:
-        scalers = [None]*n_datasets
-    else:
-        for i, j in zip(scalers, X_train):
-            if i is not None:
-                i.fit(j)
+    # Apply transforms when needed
+    data_train = {}
+    valcond = False  # Val set
+    testcond = False  # Test set
+    for key, value in data.items():
+        for k, v in value.items():
+            if 'X_' in k:
+                value[k] = value['scaler'].transform(value[k])
 
-    # Scale data
-    X_train, y_train = transform(X_train, y_train, scalers)
+            if 'val' in k:
+                valcond = True
 
-    if valcond:
-        X_val, y_val = transform(X_val, y_val, scalers)
+            if 'test' in k:
+                testcond = True
 
-    if testcond:
-        X_test, y_test = transform(X_test, y_test, scalers)
+            if (k != 'scaler') and (k != 'loss'):
+                value[k] = to_tensor(value[k])
 
-    data = [loader(X, y, batch_size) for X, y in zip(X_train, y_train)]
-    data = CombinedLoader(data, 'max_size')
+        data_train[key] = loader(
+                                 value['X_train'],
+                                 value['y_train'],
+                                 batch_size,
+                                 )
 
-    indxs = range(n_datasets)
+    n_datasets = len(data)
+    data_train = CombinedLoader(data_train, 'max_size')
+
     df_loss = []
     for epoch in range(1, n_epochs+1):
 
         model.train()
 
-        for batch, _, _ in data:
+        for batch, _, _ in data_train:
 
             loss = 0.0
-            for indx in indxs:
+            for indx in data.keys():
 
                 if batch[indx] is None:
                     continue
@@ -213,7 +194,7 @@ def train(
                 y = batch[indx][1]
 
                 p = model(X, indx)
-                loss += losses[indx](p, y)
+                loss += data[indx]['loss'](p, y)
 
             optimizer.zero_grad()
             loss.backward()
@@ -222,10 +203,10 @@ def train(
         with torch.no_grad():
             model.eval()
 
-            for indx in indxs:
-                y = y_train[indx]
-                p = model(X_train[indx], indx)
-                loss = losses[indx](p, y).item()
+            for indx in data.keys():
+                y = data[indx]['y_train']
+                p = model(data[indx]['X_train'], indx)
+                loss = data[indx]['loss'](p, y).item()
 
                 d = (epoch, loss, indx, 'train')
                 df_loss.append(d)
@@ -241,30 +222,27 @@ def train(
 
         if epoch % print_n == 0:
             p = f'Epoch {epoch}/{n_epochs}: '
-            if valcond:
-                print(p+f'Validation loss {loss:.2f}')
-            else:
-                print(p+f'Train loss {loss:.2f}')
+            print(p+f'Train loss {loss:.2f}')
 
     # Loss curve
     columns = ['epoch', 'loss', 'data', 'set']
     df_loss = pd.DataFrame(df_loss, columns=columns)
 
     # Train parity
-    df_parity = pred(model, X_train, y_train, indxs)
+    df_parity = pred(model, X_train, y_train, data.keys())
     df_parity['set'] = 'train'
 
     # Validation parity
     if valcond:
 
-        df = pred(model, X_val, y_val, indxs)
+        df = pred(model, X_val, y_val, data.keys())
         df['set'] = 'validation'
         df_parity = pd.concat([df_parity, df])
 
     # Test parity
     if testcond:
 
-        df = pred(model, X_test, y_test, indxs)
+        df = pred(model, X_test, y_test, data.keys())
         df['set'] = 'test'
         df_parity = pd.concat([df_parity, df])
 
