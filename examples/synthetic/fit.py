@@ -8,12 +8,19 @@ def main():
     save_dir = 'outputs'
     lr = 1e-4
     batch_size = 32
-    n_epochs = 100
+    n_epochs = 1000
     tasks = ['data1', 'data2', 'data3']
 
     # Data
     X, y = datasets.toy()
-    data = datasets.splitter(X, y, tasks, train_size=1)
+    data = datasets.splitter(
+                             X,
+                             y,
+                             tasks,
+                             train_size=0.8,
+                             val_size=0.1,
+                             test_size=0.1,
+                             )
 
     for k, v in data.items():
         data[k]['scaler'] = StandardScaler()

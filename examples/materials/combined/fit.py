@@ -13,7 +13,14 @@ def main():
 
     # Data
     X, y = datasets.load(tasks)
-    data = datasets.splitter(X, y, tasks, train_size=1)
+    data = datasets.splitter(
+                             X, 
+                             y,
+                             tasks,
+                             train_size=0.8,
+                             val_size=0.1,
+                             test_size=0.1,
+                             )
 
     for k, v in data.items():
         data[k]['scaler'] = StandardScaler()

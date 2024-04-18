@@ -189,7 +189,7 @@ def train(
                     p = model(data[indx]['X_val'], indx)
                     loss = data[indx]['loss'](p, y).item()
 
-                    d = (epoch, loss, indx, 'validation')
+                    d = (epoch, loss, indx, 'val')
                     df_loss.append(d)
 
         if epoch % print_n == 0:

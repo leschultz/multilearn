@@ -155,7 +155,7 @@ def generate(
 
         if data_set == 'train':
             color = 'g'
-        elif data_set == 'validation':
+        elif data_set == 'val':
             color = 'b'
         elif data_set == 'test':
             color = 'r'
@@ -175,7 +175,7 @@ def generate(
 
         if data_set == 'train':
             color = 'g'
-        elif data_set == 'validation':
+        elif data_set == 'val':
             color = 'b'
         elif data_set == 'test':
             color = 'r'

@@ -32,10 +32,11 @@ def splitter(X, y, names=None, train_size=1.0, val_size=0.0, test_size=0.0):
 def split(X, y, train_size=1.0, val_size=0.0, test_size=0.0):
 
     # Make sure data splits sum to 1
-    if any([train_size > 1.0, val_size > 1.0, test_size > 1.0]):
-        raise 'Split fractions not sensible'
+    assert train_size+val_size+test_size == 1.0, (
+        'Split fractions must sum to 1'
+    )
 
-    elif train_size+val_size < 1.0:
+    if train_size+val_size < 1.0:
         test_size = 1.0-train_size-val_size
 
     elif train_size+test_size < 1.0:
@@ -50,43 +51,38 @@ def split(X, y, train_size=1.0, val_size=0.0, test_size=0.0):
         data['X_train'] = X
         data['y_train'] = y
 
-    elif all([train_size > 0.0, val_size > 0.0, test_size > 0.0]):
+    else:
 
         splits = train_test_split(X, y, train_size=train_size)
         X_train, X_test, y_train, y_test = splits
 
-        splits = train_test_split(X_test, y_test, test_size=test_size)
-        X_val, X_test, y_val, y_test = splits
-
         data['X_train'] = X_train
         data['y_train'] = y_train
-        data['X_val'] = X_val
-        data['y_val'] = y_val
-        data['X_test'] = X_test
-        data['y_test'] = y_test
 
-    elif train_size+val_size == 1.0:
-        splits = train_test_split(X, y, train_size=train_size)
-        X_train, X_val, y_train, y_val = splits
+        if train_size+val_size == 1.0:
+            data['X_val'] = X_test
+            data['y_val'] = y_test
 
-        data['X_train'] = X_train
-        data['y_train'] = y_train
-        data['X_val'] = X_val
-        data['y_val'] = y_val
+        elif train_size+test_size == 1.0:
+            data['X_test'] = X_test
+            data['y_test'] = y_test
 
-    elif train_size+test_size == 1.0:
-        splits = train_test_split(X, y, train_size=train_size)
-        X_train, X_test, y_train, y_test = splits
-
-        data['X_train'] = X_train
-        data['y_train'] = y_train
-        data['X_test'] = X_test
-        data['y_test'] = y_test
+        else:
+            splits = train_test_split(
+                                      X_test,
+                                      y_test,
+                                      test_size=test_size/(test_size+val_size),
+                                      )
+            X_val, X_test, y_val, y_test = splits
+            data['X_val'] = X_val
+            data['y_val'] = y_val
+            data['X_test'] = X_test
+            data['y_test'] = y_test
 
     return data
 
 
-def toy(points=[1000, 500, 100]):
+def toy(points=[1000, 900, 500]):
 
     X1 = np.random.uniform(size=(points[0], 3))
     y1 = 3+X1[:, 0]+X1[:, 1]**3+np.log(X1[:, 2])
