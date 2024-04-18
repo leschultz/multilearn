@@ -26,7 +26,11 @@ def main():
         data[k]['scaler'] = StandardScaler()
         data[k]['loss'] = nn.L1Loss()
 
-    model = models.MultiNet(tasks=tasks, input_arch={500: 1})
+    model = models.MultiNet(
+                            tasks=tasks,
+                            input_arch={500: 1},
+                            mid_arch={1024: 1, 32: 1, 16: 1},
+                            )
     optimizer = optim.Adam
 
     out = utils.train(
