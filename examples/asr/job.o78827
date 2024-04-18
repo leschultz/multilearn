@@ -1,0 +1,57 @@
+Epoch 100/1000: Validation loss 0.82
+Epoch 200/1000: Validation loss 0.79
+Epoch 300/1000: Validation loss 0.77
+Epoch 400/1000: Validation loss 0.81
+Epoch 500/1000: Validation loss 0.82
+Epoch 600/1000: Validation loss 0.77
+Epoch 700/1000: Validation loss 0.79
+Epoch 800/1000: Validation loss 0.76
+Epoch 900/1000: Validation loss 0.77
+Epoch 1000/1000: Validation loss 0.75
+{'model': MultiNet(
+  (input): ModuleList(
+    (0): Sequential(
+      (0): Linear(in_features=350, out_features=500, bias=True)
+      (1): ReLU()
+    )
+  )
+  (mid): Sequential(
+    (0): Linear(in_features=500, out_features=1024, bias=True)
+    (1): ReLU()
+    (2): Linear(in_features=1024, out_features=32, bias=True)
+    (3): ReLU()
+    (4): Linear(in_features=32, out_features=16, bias=True)
+    (5): ReLU()
+  )
+  (out): ModuleList(
+    (0): Sequential(
+      (0): Linear(in_features=16, out_features=1, bias=True)
+    )
+  )
+), 'scalers': [StandardScaler()], 'df_loss':       epoch      loss  data         set
+0         1  1.043069     0       train
+1         1  0.972267     0  validation
+2         2  0.935968     0       train
+3         2  0.905702     0  validation
+4         3  0.829775     0       train
+...     ...       ...   ...         ...
+1995    998  0.771449     0  validation
+1996    999  0.113529     0       train
+1997    999  0.732187     0  validation
+1998   1000  0.106106     0       train
+1999   1000  0.749872     0  validation
+
+[2000 rows x 4 columns], 'df_parity':            y         p  data    set
+0   1.591021  1.565180     0  train
+1   0.977163  0.870974     0  train
+2   1.040430  0.027163     0  train
+3   2.121222  2.108722     0  train
+4   0.516119  0.571712     0  train
+..       ...       ...   ...    ...
+24  0.023285  0.392088     0   test
+25  1.740363  2.335018     0   test
+26  3.059601  4.230700     0   test
+27  3.291224  3.149924     0   test
+28 -0.428344 -0.341808     0   test
+
+[289 rows x 4 columns]}
