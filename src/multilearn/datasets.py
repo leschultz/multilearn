@@ -1,5 +1,12 @@
 from sklearn.model_selection import train_test_split
+
+import pandas as pd
 import numpy as np
+
+import pkg_resources
+import os
+
+data_path = pkg_resources.resource_filename('multilearn', 'data')
 
 
 def splitter(X, y, names=None, train_size=1.0, val_size=0.0, test_size=0.0):
@@ -99,3 +106,20 @@ def toy(points=[1000, 500, 100]):
     y = [y1, y2, y3]
 
     return X, y
+
+
+def load(names):
+
+    Xs = []
+    ys = []
+    for name in names:
+        path = os.path.join(data_path, f'{name}.csv')
+        df = pd.read_csv(path)
+
+        y = df['y'].values
+        X = df.drop('y', axis=1).values
+
+        Xs.append(X)
+        ys.append(y)
+
+    return Xs, ys

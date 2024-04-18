@@ -1,2 +1,2 @@
-export PYTHONPATH=../../:$PYTHONPATH
-python3 run.py
+export PYTHONPATH=../../../src/:$PYTHONPATH
+python3 fit.py
