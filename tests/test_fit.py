@@ -14,17 +14,17 @@ class ml_test(unittest.TestCase):
         lr = 1e-4
         batch_size = 32
         n_epochs = 10
-        tasks = ['data1', 'data2', 'data3']
+        tasks = ['toy1', 'toy2', 'friedman1']
 
         # Data
-        X, y = datasets.toy()
+        X, y = datasets.load(tasks)
         data = datasets.splitter(X, y, tasks, train_size=1)
 
         for k, v in data.items():
             data[k]['scaler'] = StandardScaler()
             data[k]['loss'] = nn.L1Loss()
 
-        model = models.MultiNet(tasks=tasks, input_arch={500: 1})
+        model = models.MultiNet(tasks=tasks, input_arch={50: 1})
         optimizer = optim.Adam
 
         out = utils.train(

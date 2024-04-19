@@ -1,2 +1,2 @@
-export PYTHONPATH=../../../src/:$PYTHONPATH
+export PYTHONPATH=$(pwd)/../../../src/:$PYTHONPATH
 torchrun fit.py
