@@ -135,7 +135,7 @@ def train(
     data_train = {}
     for key, value in data.items():
         for k, v in value.items():
-            if 'X_' in k:
+            if ('X_' in k) and ('scaler' in value.keys()):
                 value[k] = value['scaler'].transform(value[k])
 
             if (k != 'scaler') and (k != 'loss'):

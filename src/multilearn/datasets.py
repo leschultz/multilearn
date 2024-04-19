@@ -82,38 +82,38 @@ def split(X, y, train_size=1.0, val_size=0.0, test_size=0.0):
     return data
 
 
-def toy(points=[1000, 900, 500]):
-
-    X1 = np.random.uniform(size=(points[0], 3))
-    y1 = 3+X1[:, 0]+X1[:, 1]**3+np.log(X1[:, 2])
-
-    X2 = np.random.uniform(size=(points[1], 3))
-    y2 = 3+X2[:, 0]+X2[:, 1]**3+X2[:, 2]
-
-    X3 = np.random.uniform(size=(points[2], 5))
-    y3 = (
-          10*np.sin(np.pi*X3[:, 0]*X3[:, 1])
-          + 20*(X3[:, 2]-0.5)**2
-          + 10*X3[:, 3]
-          + 5*X3[:, 4]
-          )
-
-    X = [X1, X2, X3]
-    y = [y1, y2, y3]
-
-    return X, y
-
-
 def load(names):
 
     Xs = []
     ys = []
     for name in names:
-        path = os.path.join(data_path, f'{name}.csv')
-        df = pd.read_csv(path)
 
-        y = df['y'].values
-        X = df.drop('y', axis=1).values
+        if name == 'toy1':
+
+            X = np.random.uniform(size=(1000, 3))
+            y = 3+X[:, 0]+X[:, 1]**3+np.log(X[:, 2])
+
+        elif name == 'toy2':
+
+            X = np.random.uniform(size=(900, 3))
+            y = 3+X[:, 0]+X[:, 1]**3+X[:, 2]
+
+        elif name == 'friedman1':
+
+            X = np.random.uniform(size=(500, 5))
+            y = (
+                 10*np.sin(np.pi*X[:, 0]*X[:, 1])
+                 + 20*(X[:, 2]-0.5)**2
+                 + 10*X[:, 3]
+                 + 5*X[:, 4]
+                 )
+
+        else:
+            path = os.path.join(data_path, f'{name}.csv')
+            df = pd.read_csv(path)
+
+            y = df['y'].values
+            X = df.drop('y', axis=1).values
 
         Xs.append(X)
         ys.append(y)

@@ -9,10 +9,10 @@ def main():
     lr = 1e-4
     batch_size = 32
     n_epochs = 1000
-    tasks = ['data1', 'data2', 'data3']
+    tasks = ['toy1', 'toy2', 'friedman1']
 
     # Data
-    X, y = datasets.toy()
+    X, y = datasets.load(tasks)
     data = datasets.splitter(
                              X,
                              y,
@@ -26,7 +26,11 @@ def main():
         data[k]['scaler'] = StandardScaler()
         data[k]['loss'] = nn.L1Loss()
 
-    model = models.MultiNet(tasks=tasks, input_arch={500: 1})
+    model = models.MultiNet(
+                            tasks=tasks,
+                            input_arch={10: 1},
+                            mid_arch={1024: 1, 16: 1},
+                            )
     optimizer = optim.Adam
 
     out = utils.train(

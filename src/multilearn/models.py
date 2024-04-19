@@ -6,7 +6,7 @@ class MultiNet(nn.Module):
     def __init__(
                  self,
                  input_arch={},
-                 mid_arch={1024: 1, 32: 1, 16: 1},
+                 mid_arch={64: 1, 32: 1},
                  out_arch={},
                  tasks=[0],
                  ):
@@ -30,7 +30,7 @@ class MultiNet(nn.Module):
 
         def separate(arch, tasks, is_out=False):
 
-            separate = {}
+            separate = nn.ModuleDict()
             for t in tasks:
                 i = make_layers(arch, is_out)
                 separate[t] = i
