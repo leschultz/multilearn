@@ -95,7 +95,7 @@ def load(names):
 
         elif name == 'toy2':
 
-            X = np.random.uniform(size=(900, 3))
+            X = np.random.uniform(-100, 50, size=(900, 3))
             y = 3+X[:, 0]+X[:, 1]**3+X[:, 2]
 
         elif name == 'friedman1':

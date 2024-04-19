@@ -115,6 +115,7 @@ def train(
           batch_size=32,
           lr=1e-4,
           save_dir='outputs',
+          patience=np.inf,
           print_n=100,
           ):
 
@@ -150,6 +151,8 @@ def train(
     data_train = CombinedLoader(data_train, 'max_size')
 
     df_loss = []
+    no_improv = 0
+    best_loss = float('inf')
     for epoch in range(1, n_epochs+1):
 
         model.train()
@@ -175,12 +178,14 @@ def train(
         with torch.no_grad():
             model.eval()
 
+            all_loss = 0.0
             for indx in data.keys():
                 y = data[indx]['y_train']
                 p = model(data[indx]['X_train'], indx)
                 loss = data[indx]['loss'](p, y).item()
 
-                d = (epoch, loss, indx, 'train')
+                split = 'train'
+                d = (epoch, loss, indx, split)
                 df_loss.append(d)
 
                 if 'y_val' in data[indx].keys():
@@ -189,12 +194,29 @@ def train(
                     p = model(data[indx]['X_val'], indx)
                     loss = data[indx]['loss'](p, y).item()
 
-                    d = (epoch, loss, indx, 'val')
+                    split = 'val'
+                    d = (epoch, loss, indx, split)
                     df_loss.append(d)
 
+                    all_loss += loss
+
+                else:
+                    all_loss += loss
+
+        # Early stopping
+        if all_loss < best_loss:
+            best_model = copy.deepcopy(model)
+            best_loss = all_loss
+            no_improv = 0
+
+        else:
+            no_improv = 1
+
+        if no_improv >= patience:
+            break
+
         if epoch % print_n == 0:
-            p = f'Epoch {epoch}/{n_epochs}: '
-            print(p+f'Train loss {loss:.2f}')
+            print(f'Epoch {epoch}/{n_epochs}: {split} loss {loss:.2f}')
 
     # Loss curve
     columns = ['epoch', 'loss', 'data', 'split']
@@ -212,7 +234,7 @@ def train(
          )
 
     out = {
-           'model': model,
+           'model': best_model,
            'df_parity': df_parity,
            'df_loss': df_loss,
            'data': data,

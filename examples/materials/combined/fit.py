@@ -14,7 +14,7 @@ def main():
     # Data
     X, y = datasets.load(tasks)
     data = datasets.splitter(
-                             X, 
+                             X,
                              y,
                              tasks,
                              train_size=0.8,
@@ -28,8 +28,9 @@ def main():
 
     model = models.MultiNet(
                             tasks=tasks,
-                            input_arch={500: 1},
-                            mid_arch={1024: 1, 32: 1, 16: 1},
+                            input_arch={100: 1, 100: 1},
+                            mid_arch={100: 1, 50: 1},
+                            out_arch={50: 1, 10: 1}
                             )
     optimizer = optim.Adam
 
@@ -40,6 +41,7 @@ def main():
                       n_epochs=n_epochs,
                       batch_size=batch_size,
                       lr=lr,
+                      patience=10,
                       save_dir=save_dir,
                       )
 
