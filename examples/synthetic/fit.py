@@ -42,6 +42,7 @@ def main():
                       n_epochs=n_epochs,
                       batch_size=batch_size,
                       lr=lr,
+                      patience=10,
                       save_dir=save_dir,
                       )
 

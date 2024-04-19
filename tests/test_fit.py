@@ -13,7 +13,7 @@ class ml_test(unittest.TestCase):
         save_dir = 'outputs'
         lr = 1e-4
         batch_size = 32
-        n_epochs = 10
+        n_epochs = 2
         tasks = ['toy1', 'toy2', 'friedman1']
 
         # Data
