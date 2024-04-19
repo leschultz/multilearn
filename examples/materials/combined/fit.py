@@ -28,7 +28,7 @@ def main():
 
     model = models.MultiNet(
                             tasks=tasks,
-                            input_arch={100: 1, 100: 1},
+                            input_arch={100: 1},
                             mid_arch={100: 1, 50: 1},
                             out_arch={50: 1, 10: 1}
                             )

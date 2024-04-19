@@ -19,7 +19,7 @@ class MultiNet(nn.Module):
             for neurons, layers in arch.items():
                 for i in range(layers):
                     hidden.append(nn.LazyLinear(neurons))
-                    hidden.append(nn.ReLU())
+                    hidden.append(nn.LeakyReLU())
 
             if is_out:
                 hidden.append(nn.LazyLinear(1))

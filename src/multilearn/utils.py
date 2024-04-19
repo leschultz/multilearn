@@ -51,7 +51,7 @@ def save(
                           open(os.path.join(new_dir, 'loss.pkl'), 'wb'),
                           )
 
-            else:
+            elif ('X_' in k) or ('y_' in k):
 
                 if 'X_' in k:
                     v = v.cpu().detach()
@@ -139,7 +139,7 @@ def train(
             if ('X_' in k) and ('scaler' in value.keys()):
                 value[k] = value['scaler'].transform(value[k])
 
-            if (k != 'scaler') and (k != 'loss'):
+            if all([k != 'scaler', k != 'loss', k != 'weight']):
                 value[k] = to_tensor(value[k])
 
         data_train[key] = loader(
@@ -169,7 +169,12 @@ def train(
                 y = batch[indx][1]
 
                 p = model(X, indx)
-                loss += data[indx]['loss'](p, y)
+                i = data[indx]['loss'](p, y)
+
+                if 'weight' in data[indx].keys():
+                    i *= data[indx]['weight']
+
+                loss += i
 
             optimizer.zero_grad()
             loss.backward()
