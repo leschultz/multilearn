@@ -2,6 +2,10 @@ from torch import nn
 
 
 class MultiNet(nn.Module):
+    '''
+    A general model for building multi-target learning NNs.
+    Each separation of layers is symmetric across input datasets.
+    '''
 
     def __init__(
                  self,
@@ -42,6 +46,16 @@ class MultiNet(nn.Module):
         self.out = separate(out_arch, tasks, True)
 
     def forward(self, x, prop):
+        '''
+        Use a model to predict.
+
+        Args:
+            x (nn.tensor): The features.
+            prop: The property to predict.
+
+        Returns:
+            torch.FloatTensor: The predicted target value.
+        '''
 
         for i in self.input[prop]:
             x = i(x)

@@ -26,6 +26,17 @@ def save(
          save_dir='./outputs',
          ):
 
+    '''
+    Save results of run.
+
+    Args:
+        model (object): The trained tensorflow model.
+        df_parity (pd.DataFrame): The parity plot data.
+        df_loss (pd.DataFrame): The learning curve data.
+        data (dict): The data splits.
+        save_dir (str): The location to save outputs.
+    '''
+
     os.makedirs(save_dir, exist_ok=True)
 
     plots.generate(df_parity, df_loss, save_dir)
@@ -63,6 +74,16 @@ def save(
 
 
 def to_tensor(x):
+    '''
+    Convert variable to tensor.
+
+    Args:
+        x (np.ndarray): The variable to convert.
+
+    Returns:
+        torch.FloatTensor: The converted variable.
+    '''
+
     y = torch.FloatTensor(x).to(device)
 
     if len(y.shape) < 2:
@@ -72,6 +93,18 @@ def to_tensor(x):
 
 
 def loader(X, y, batch_size=32, shuffle=True):
+    '''
+    A wrapper to load data for pytorch.
+
+    Args:
+        X (torch.FloatTensor): The features.
+        y (torch.FloatTensor): The target values.
+        batch_size (int): The size of the batch for gradient descent.
+        shuffle (bool): Whether to shuffle data.
+
+    Returns:
+        torch.utils.data.DataLoader: The data loader.
+    '''
 
     data = TensorDataset(X, y)
     data = DataLoader(
@@ -84,6 +117,16 @@ def loader(X, y, batch_size=32, shuffle=True):
 
 
 def pred(model, data):
+    '''
+    Function to generate parity plot data predictions.
+
+    Args:
+        model (object): The trained model.
+        data (dict): The data splits.
+
+    Returns:
+        pd.DataFrame: Parity plot data.
+    '''
 
     df = []
     with torch.no_grad():
@@ -118,6 +161,23 @@ def train(
           patience=np.inf,
           print_n=100,
           ):
+    '''
+    The training workflow for models.
+
+    Args:
+        model (object): The model to train/assess.
+        optimizer (object): The torch optimizer
+        data (dict): The data with splits.
+        n_epochs (int): The number of epochs to train.
+        batch_size (int): The size of the batch for gradient descent.
+        lr (float): The learning rate.
+        save_dir (str): The location to save outputs.
+        patience (int): Stop training if no improvement after n epochs.
+        print_n (int): The interval to print loss.
+
+    Returns:
+        dict: The trained model and plot data.
+    '''
 
     # Copy objects
     model = copy.deepcopy(model).to(device)

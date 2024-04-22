@@ -16,11 +16,11 @@ def plot_dump(data, fig, ax, save, legend=True):
     '''
     Function to dump figures.
 
-    inputs:
-        data = Data to dump in json file.
-        fig = Figure object.
-        ax = Axes object.
-        save = The location to save plot.
+    Args:
+        data (dict): Data to dump in json file.
+        fig (object): Figure object.
+        ax (object): Axes object.
+        save (str): The location to save plot.
     '''
 
     fig.tight_layout()
@@ -59,10 +59,14 @@ def plot_dump(data, fig, ax, save, legend=True):
 def parity(y, y_pred, sigma_y, save, color):
 
     '''
-    Make a paroody plot.
+    Make a parity plot.
 
-    inputs:
-        save = The directory to save plot.
+    Args:
+        y (np.ndarray): The true target variable.
+        y_pred (np.ndarray): The predicted target variable.
+        sigma_y (float): The standard deviation of y.
+        save (str): The directory to save plot.
+        color (str): The color of the plot.
     '''
 
     rmse = metrics.mean_squared_error(y, y_pred)**0.5
@@ -144,6 +148,15 @@ def generate(
              save='.',
              ):
 
+    '''
+    Generate both parity and learning curve plots.
+
+    Args:
+        df_parity (pd.DataFrame): Parity plot data.
+        df_loss (pd.DataFrame): Learning curve data.
+        save (str): Location to save all outputs.
+    '''
+
     for group, values in df_parity.groupby(['data', 'split']):
 
         y = values['y']
@@ -188,6 +201,16 @@ def generate(
 
 
 def learning_curve(x, y, save, group, color):
+    '''
+    Plot the loss versus the epoch.
+
+    Args:
+        x (list): The epochs.
+        y (list): The loss.
+        save (str): The save location.
+        group (str): The data set in question.
+        color (str): The plot color.
+    '''
 
     # Regular plot
     fig, ax = pl.subplots()
