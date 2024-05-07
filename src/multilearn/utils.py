@@ -64,8 +64,11 @@ def save(
 
             elif ('X_' in k) or ('y_' in k):
 
-                if 'X_' in k:
-                    v = v.cpu().detach()
+                v = v.cpu()
+                if isinstance(v, torch.Tensor):
+                    v = v.numpy()
+                else:
+                    v = v.detach()
 
                 np.savetxt(os.path.join(
                                         new_dir,
