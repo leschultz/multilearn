@@ -2,7 +2,7 @@ import setuptools
 
 # Package information
 name = 'multilearn'
-version = '0.0.4'  # Need to increment every time to push to PyPI
+version = '0.0.5'  # Need to increment every time to push to PyPI
 description = 'Multi-task learning with Pytorch.'
 url = 'https://github.com/leschultz/multilearn'
 author = 'Lane E. Schultz'
