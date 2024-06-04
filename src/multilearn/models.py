@@ -26,11 +26,15 @@ class model_wrapper:
 
     def fit(self, data, optimizer, **kwargs):
 
-        print_n = kwargs['print_n']
         n_epochs = kwargs['n_epochs']
         batch_size = kwargs['batch_size']
         lr = kwargs['lr']
-        patience = kwargs['patience']
+
+        if 'print_n' in kwargs.keys():
+            print_n = kwargs['print_n']
+            print_n_cond = True
+        else:
+            print_n_cond = False
 
         data = copy.deepcopy(data)  # Avoids editing original data
         optimizer = optimizer(self.model.parameters(), lr=lr)
@@ -115,28 +119,12 @@ class model_wrapper:
                         d = (epoch, loss, indx, split)
                         df_loss.append(d)
 
-                        all_loss += loss
+                    # Loss from validation set if defined
+                    all_loss += loss
 
-                    else:
-                        all_loss += loss
-
-            # Early stopping
-            if all_loss < best_loss:
-                best_model = copy.deepcopy(self.model)
-                best_loss = all_loss
-                no_improv = 0
-
-            else:
-                no_improv += 1
-
-            if no_improv >= patience:
-                break
-
-            if epoch % print_n == 0:
-                print(f'Epoch {epoch}/{n_epochs}: {split} loss {loss:.2f}')
-
-        if patience is not None:
-            self.model = best_model
+            if print_n_cond:
+                if epoch % print_n == 0:
+                    print(f'Epoch {epoch}/{n_epochs}: {split} loss {loss:.2f}')
 
         # Loss curve
         columns = ['epoch', 'loss', 'data', 'split']

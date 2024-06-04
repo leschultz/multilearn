@@ -3,64 +3,27 @@ from sklearn.preprocessing import StandardScaler
 from multilearn import models, utils
 from torch import optim, nn
 
-import pandas as pd
-import numpy as np
-import os
-
 
 def main():
 
     save_dir = 'outputs'
     lr = 1e-4
     batch_size = 32
-    n_epochs = 1500
+    n_epochs = 200
     train_size = 0.8  # Traning fraction
     val_size = 1.0-train_size  # Validation fraction
     print_n = n_epochs//10
 
-    # Local data 1
-    local1 = './local1.csv'
-
-    # Create local data 1
-    X1 = np.random.uniform(size=(500, 1))
-    y1 = 10*np.sin(np.pi*X1[:, 0])
-
-    # Save local data 1
-    df = pd.DataFrame(X1)
-    df['target_1'] = y1
-    df.to_csv(local1, index=False)
-
-    # Local data 2
-    local2 = './local2.csv'
-
-    # Create local data 2
-    X2 = np.random.uniform(size=(50, 7))
-    y2 = (
-          10*np.sin(np.pi*X2[:, 0]*X2[:, 1])
-          + 20*(X2[:, 2]-0.5)**2
-          + 10*X2[:, 3]
-          + 5*X2[:, 4]
-          )
-
-    # Save local data 2
-    df = pd.DataFrame(X2)
-    df['target_2'] = y2
-    df.to_csv(local2, index=False)
-
     # Combine data to load
-    locations = [local1, local2]
+    tasks = ['asr', 'opband', 'stability']
+    locations = [f'../../sample_data/{i}.csv' for i in tasks]
 
     # Load data in dictionary (make sure to keep order for loading items)
-    tasks = ['name1', 'name2']
     data = utils.load(
                       locations,
                       names=tasks,  # User defined name
-                      targets=['target_1', 'target_2'],  # Target names
-                      drops=[None, ['5', '6']],  # Columns to drop
+                      targets=['y']*len(tasks),  # Target names
                       )
-
-    # Clean generated csv file
-    [os.remove(i) for i in locations]
 
     # Scalers and loss corresponding to loaded Xs and ys
     for key, value in data.items():
@@ -71,8 +34,8 @@ def main():
     model = models.MultiNet(
                             tasks=tasks,
                             input_arch={100: 1},
-                            mid_arch={50: 1},
-                            out_arch={25: 1}
+                            mid_arch={100: 1, 50: 1},
+                            out_arch={50: 1, 10: 1}
                             )
 
     # The optimizer for the NN model

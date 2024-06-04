@@ -8,7 +8,7 @@ import json
 import os
 
 # Font styles
-font = {'font.size': 16, 'lines.markersize': 10}
+font = {'font.size': 16}
 matplotlib.rcParams.update(font)
 
 

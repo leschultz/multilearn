@@ -1,6 +1,6 @@
 from sklearn.model_selection import RepeatedKFold
 from sklearn.preprocessing import StandardScaler
-from multilearn import datasets, models, utils
+from multilearn import models, utils
 from torch import optim, nn
 
 import pandas as pd
@@ -58,12 +58,12 @@ class ml_test(unittest.TestCase):
 
         # Load data in dictionary (make sure to keep order for loading items)
         tasks = ['name1', 'name2']
-        data = datasets.load(
-                             locations,
-                             names=tasks,  # User defined name
-                             targets=['target_1', 'target_2'],  # Target names
-                             drops=[None, ['5', '6']],  # Columns to drop
-                             )
+        data = utils.load(
+                          locations,
+                          names=tasks,  # User defined name
+                          targets=['target_1', 'target_2'],  # Target names
+                          drops=[None, ['5', '6']],  # Columns to drop
+                          )
 
         # Clean generated csv file
         [os.remove(i) for i in locations]
