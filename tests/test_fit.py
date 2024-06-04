@@ -19,7 +19,6 @@ class ml_test(unittest.TestCase):
         lr = 1e-4
         batch_size = 32
         n_epochs = 100
-        patience = 10  # Learning loop patience
         train_size = 0.8  # Traning fraction
         val_size = 1.0-train_size  # Validation fraction
         print_n = n_epochs//10
@@ -96,7 +95,6 @@ class ml_test(unittest.TestCase):
                  lr=lr,
                  batch_size=batch_size,
                  n_epochs=n_epochs,
-                 patience=patience,
                  print_n=print_n,
                  )
 
@@ -111,7 +109,6 @@ class ml_test(unittest.TestCase):
                                lr=lr,
                                batch_size=batch_size,
                                n_epochs=n_epochs,
-                               patience=patience,
                                print_n=print_n,
                                )
 
