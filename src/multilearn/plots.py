@@ -162,7 +162,7 @@ def generate(
         y = values['y']
         sigma_y = y.std()
         y = y.values
-        y_pred = values['p'].values
+        y_pred = values['y_pred'].values
 
         data_indx, data_set = group
 
@@ -175,7 +175,7 @@ def generate(
 
         save_dir = os.path.join(*[save, f'{data_indx}', 'parity'])
         os.makedirs(save_dir, exist_ok=True)
-        newsave = os.path.join(save_dir, '{}.png'.format(data_set))
+        newsave = os.path.join(save_dir, data_set)
 
         parity(y, y_pred, sigma_y, newsave, color)
 
@@ -195,7 +195,7 @@ def generate(
 
         save_dir = os.path.join(*[save, f'{data_indx}', 'loss_vs_epoch'])
         os.makedirs(save_dir, exist_ok=True)
-        newsave = os.path.join(save_dir, '{}.png'.format(data_set))
+        newsave = os.path.join(save_dir, data_set)
 
         learning_curve(x, y, newsave, data_set, color)
 
@@ -225,6 +225,7 @@ def learning_curve(x, y, save, group, color):
             x,
             y,
             marker='.',
+            linestyle='none',
             color=color,
             label=label,
             )

@@ -1,28 +1,37 @@
-from lightning.pytorch.utilities.combined_loader import CombinedLoader
 from torch.utils.data import DataLoader, TensorDataset
-from multilearn import plots
-from joblib import dump
+from sklearn.model_selection import train_test_split
+from multilearn import plots, models
+from pathlib import Path
 
 import pandas as pd
-import numpy as np
 
 import torch
 import copy
 import dill
 import os
 
-# Chose defalut device
-if torch.cuda.is_available():
-    device = torch.device('cuda')
-else:
-    device = torch.device('cpu')
+
+def find(where, match):
+    paths = list(map(str, Path(where).rglob(match)))
+    return paths
+
+
+def find_load(*args):
+
+    paths = find(*args)
+    df = []
+    for path in paths:
+        df.append(pd.read_csv(path))
+
+    df = pd.concat(df)
+
+    return df
 
 
 def save(
-         model,
          df_parity,
          df_loss,
-         data,
+         model=None,
          save_dir='./outputs',
          ):
 
@@ -33,7 +42,6 @@ def save(
         model (object): The trained tensorflow model.
         df_parity (pd.DataFrame): The parity plot data.
         df_loss (pd.DataFrame): The learning curve data.
-        data (dict): The data splits.
         save_dir (str): The location to save outputs.
     '''
 
@@ -41,47 +49,20 @@ def save(
 
     plots.generate(df_parity, df_loss, save_dir)
 
-    torch.save(
-               model,
-               os.path.join(save_dir, 'model.pth')
-               )
-
     df_parity.to_csv(os.path.join(save_dir, 'predictions.csv'), index=False)
     df_loss.to_csv(os.path.join(save_dir, 'loss_vs_epochs.csv'), index=False)
 
-    for key, value in data.items():
-
-        new_dir = os.path.join(save_dir, key)
-        for k, v in value.items():
-            if k == 'scaler':
-                dump(v, os.path.join(new_dir, 'scaler.joblib'))
-
-            elif k == 'loss':
-                dill.dump(
-                          v,
-                          open(os.path.join(new_dir, 'loss.pkl'), 'wb'),
-                          )
-
-            elif ('X_' in k) or ('y_' in k):
-
-                v = v.cpu()
-                if isinstance(v, torch.Tensor):
-                    v = v.numpy()
-                else:
-                    v = v.detach()
-
-                np.savetxt(os.path.join(
-                                        new_dir,
-                                        f'{k}.csv',
-                                        ), v, delimiter=',')
+    if model is not None:
+        dill.dump(model, open(os.path.join(save_dir, 'model.dill'), 'wb'))
 
 
-def to_tensor(x):
+def to_tensor(x, device):
     '''
     Convert variable to tensor.
 
     Args:
         x (np.ndarray): The variable to convert.
+        device (str): The device.
 
     Returns:
         torch.FloatTensor: The converted variable.
@@ -134,18 +115,21 @@ def pred(model, data):
     df = []
     with torch.no_grad():
         for key, value in data.items():
-
             for k, v in value.items():
-
                 if 'X_' in k:
+
                     split = k.split('_')[1]
                     X = value[k]
                     y = value['y_'+split]
+                    y_pred = model.predict(X, key)
+                    index = value['indx_'+split]
+
                     d = pd.DataFrame()
-                    d['y'] = y.cpu().detach().view(-1)
-                    d['p'] = model(X, key).cpu().detach().view(-1)
+                    d['y'] = y
+                    d['y_pred'] = y_pred
                     d['data'] = key
                     d['split'] = split
+                    d['index'] = index
                     df.append(d)
 
     df = pd.concat(df)
@@ -153,159 +137,155 @@ def pred(model, data):
     return df
 
 
-def train(
-          model,
-          optimizer,
-          data,
-          n_epochs=1000,
-          batch_size=32,
-          lr=1e-4,
-          save_dir='outputs',
-          patience=np.inf,
-          print_n=100,
-          ):
-    '''
-    The training workflow for models.
+def cv(
+       data,
+       model,
+       optimizer,
+       splitter,
+       *args,
+       **kwargs,
+       ):
 
-    Args:
-        model (object): The model to train/assess.
-        optimizer (object): The torch optimizer
-        data (dict): The data with splits.
-        n_epochs (int): The number of epochs to train.
-        batch_size (int): The size of the batch for gradient descent.
-        lr (float): The learning rate.
-        save_dir (str): The location to save outputs.
-        patience (int): Stop training if no improvement after n epochs.
-        print_n (int): The interval to print loss.
-
-    Returns:
-        dict: The trained model and plot data.
-    '''
-
-    # Copy objects
-    model = copy.deepcopy(model).to(device)
     data = copy.deepcopy(data)
+    model = copy.deepcopy(model)
 
-    optimizer = optimizer(model.parameters(), lr=lr)
+    save_dir = kwargs['save_dir']
+    del kwargs['save_dir']
 
-    # Fit scalers
+    val_size = kwargs['val_size']
+
+    # Generate splits (need to have the same number of folds)
+    splits = {
+              'name': [],
+              'fold': [],
+              'train': [],
+              'validation': [],
+              'test': [],
+              }
+
+    for key, item in data.items():
+        iterator = enumerate(splitter.split(item['X']), start=1)
+        for fold, (train_indx, test_indx) in iterator:
+
+            train_indx, val_indx = train_test_split(
+                                                    train_indx,
+                                                    test_size=val_size,
+                                                    )
+
+            splits['name'].append(key)
+            splits['fold'].append(fold)
+            splits['train'].append(train_indx)
+            splits['validation'].append(val_indx)
+            splits['test'].append(test_indx)
+
+    splits = pd.DataFrame(splits)
+    total = splits.fold.max()
+
+    # Group splits by folds and then do CV
+    for group, values in splits.groupby('fold'):
+
+        # Copy so that weight do not leak from previous fold
+        submodel = copy.deepcopy(model)
+
+        # Spilt data into train and test sets
+        subdata = copy.deepcopy(data.copy())
+        for key, item in data.items():
+
+            indx_train = values.loc[values['name'] == key, 'train']
+            indx_val = values.loc[values['name'] == key, 'validation']
+            indx_test = values.loc[values['name'] == key, 'test']
+
+            indx_train = indx_train.values[0]
+            indx_val = indx_val.values[0]
+            indx_test = indx_test.values[0]
+
+            # Train, validation, and test indexes
+            subdata[key]['indx_train'] = indx_train
+            subdata[key]['indx_val'] = indx_val
+            subdata[key]['indx_test'] = indx_test
+
+            # Get training set
+            subdata[key]['X_train'] = data[key]['X'][indx_train, :]
+            subdata[key]['y_train'] = data[key]['y'][indx_train]
+
+            # Get validation set
+            subdata[key]['X_val'] = data[key]['X'][indx_val, :]
+            subdata[key]['y_val'] = data[key]['y'][indx_val]
+
+            # Get test set
+            subdata[key]['X_test'] = data[key]['X'][indx_test, :]
+            subdata[key]['y_test'] = data[key]['y'][indx_test]
+
+        status = f'Fold {group}/{total}'
+        n_letters = len(status)
+
+        print('+'*n_letters)
+        print(f'Fold {group}/{total}')
+        print('-'*n_letters)
+
+        # Create train and create predictions per fold
+        submodel = models.model_wrapper(model)
+
+        # Fit and get learning curve data
+        df_loss = submodel.fit(subdata, optimizer, **kwargs)
+        df_loss['fold'] = group
+
+        # Parity plot data
+        df_parity = pred(submodel, subdata)
+        df_parity['fold'] = group
+
+        save(
+             df_parity,
+             df_loss,
+             save_dir=os.path.join(save_dir, f'folds/fold_{group}'),
+             )
+
+    # Gather all splits and plot
+    save(
+         find_load(save_dir, 'predictions.csv'),
+         find_load(save_dir, 'loss_vs_epochs.csv'),
+         save_dir=os.path.join(save_dir, 'folds/together'),
+         )
+
+
+def full_fit(
+             data,
+             model,
+             optimizer,
+             *args,
+             **kwargs,
+             ):
+
+    data = copy.deepcopy(data)
+    model = copy.deepcopy(model)
+
+    save_dir = kwargs['save_dir']
+    del kwargs['save_dir']
+
+    print('++++++++')
+    print('Full Fit')
+    print('--------')
+
+    model = models.model_wrapper(model)
+
+    # Make all data training
     for key, value in data.items():
-        for k, v in value.items():
-            if k == 'scaler':
-                value['scaler'].fit(value['X_train'])
-                break
 
-    # Apply transforms when needed
-    data_train = {}
-    for key, value in data.items():
-        for k, v in value.items():
-            if ('X_' in k) and ('scaler' in value.keys()):
-                value[k] = value['scaler'].transform(value[k])
+        value['X_train'] = value['X']
+        value['y_train'] = value['y']
+        value['indx_train'] = list(range(value['y'].shape[0]))
 
-            if all([k != 'scaler', k != 'loss', k != 'weight']):
-                value[k] = to_tensor(value[k])
+        del value['X']
+        del value['y']
 
-        data_train[key] = loader(
-                                 value['X_train'],
-                                 value['y_train'],
-                                 batch_size,
-                                 )
-
-    data_train = CombinedLoader(data_train, 'max_size')
-
-    df_loss = []
-    no_improv = 0
-    best_loss = float('inf')
-    for epoch in range(1, n_epochs+1):
-
-        model.train()
-
-        for batch, _, _ in data_train:
-
-            loss = 0.0
-            for indx in data.keys():
-
-                if batch[indx] is None:
-                    continue
-
-                X = batch[indx][0]
-                y = batch[indx][1]
-
-                p = model(X, indx)
-                i = data[indx]['loss'](p, y)
-
-                if 'weight' in data[indx].keys():
-                    i *= data[indx]['weight']
-
-                loss += i
-
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-        with torch.no_grad():
-            model.eval()
-
-            all_loss = 0.0
-            for indx in data.keys():
-                y = data[indx]['y_train']
-                p = model(data[indx]['X_train'], indx)
-                loss = data[indx]['loss'](p, y).item()
-
-                split = 'train'
-                d = (epoch, loss, indx, split)
-                df_loss.append(d)
-
-                if 'y_val' in data[indx].keys():
-
-                    y = data[indx]['y_val']
-                    p = model(data[indx]['X_val'], indx)
-                    loss = data[indx]['loss'](p, y).item()
-
-                    split = 'val'
-                    d = (epoch, loss, indx, split)
-                    df_loss.append(d)
-
-                    all_loss += loss
-
-                else:
-                    all_loss += loss
-
-        # Early stopping
-        if all_loss < best_loss:
-            best_model = copy.deepcopy(model)
-            best_loss = all_loss
-            no_improv = 0
-
-        else:
-            no_improv = 1
-
-        if no_improv >= patience:
-            break
-
-        if epoch % print_n == 0:
-            print(f'Epoch {epoch}/{n_epochs}: {split} loss {loss:.2f}')
-
-    # Loss curve
-    columns = ['epoch', 'loss', 'data', 'split']
-    df_loss = pd.DataFrame(df_loss, columns=columns)
-
-    # Train parity
+    df_loss = model.fit(data, optimizer, **kwargs)
     df_parity = pred(model, data)
 
     save(
-         model,
          df_parity,
          df_loss,
-         data,
-         save_dir,
+         model,
+         save_dir=os.path.join(save_dir, 'full_fit'),
          )
 
-    out = {
-           'model': best_model,
-           'df_parity': df_parity,
-           'df_loss': df_loss,
-           'data': data,
-           }
-
-    return out
+    return model
